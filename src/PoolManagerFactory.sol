@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {CREATE3} from "@solady/utils/CREATE3.sol"; 
+import {CREATE3} from "@solady/utils/CREATE3.sol";
 import {PoolManager} from "./PoolManager.sol";
 
 /**
@@ -27,16 +27,9 @@ contract PoolManagerFactory {
      * @param strategyManager The strategy manager address for the new PoolManager
      * @return The address of the deployed PoolManager contract
      */
-    function deployNewContract(
-        bytes32 salt,
-        address owner,
-        address strategyManager
-    ) external returns (address) {
+    function deployNewContract(bytes32 salt, address owner, address strategyManager) external returns (address) {
         // Create the initialization code for the PoolManager contract
-        bytes memory initCode = abi.encodePacked(
-            type(PoolManager).creationCode,
-            abi.encode(owner, strategyManager)
-        );
+        bytes memory initCode = abi.encodePacked(type(PoolManager).creationCode, abi.encode(owner, strategyManager));
 
         // Deploy the contract using CREATE3 for deterministic address
         address poolManager = CREATE3.deployDeterministic(initCode, salt);
