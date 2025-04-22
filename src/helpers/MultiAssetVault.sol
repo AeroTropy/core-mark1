@@ -18,8 +18,27 @@ abstract contract MultiAssetVault is ERC6909 {
     error AssetNotFound();
     error ZeroShares();
 
+    struct TokenMetadata {
+        string name;
+        string symbol;
+        uint8 decimals;
+        uint256 totalSupply;
+        address underlyingAsset;
+        bool isRegistered;
+    }
+
+    mapping(uint256 tokenId => TokenMetadata metadata) private idToMetadata;
     mapping(uint256 tokenId => address asset) private idToAsset;
     mapping(uint256 tokenId => uint256 totalSupply_) private _totalSupply;
+    // #[derive(Copy, Drop, Serde, starknet::Store)]
+// pub struct TokenMetadata {
+//     pub name: felt252,
+//     pub symbol: felt252,
+//     pub decimals: u8,
+//     pub total_supply: u256,
+//     pub underlying_asset: ContractAddress,
+//     pub is_registered: bool,
+// }
 
     constructor() {}
 
@@ -187,4 +206,17 @@ abstract contract MultiAssetVault is ERC6909 {
         _totalSupply[tokenId] -= amount;
         super._burn(owner, tokenId, amount);
     }
+
+    function name(uint256 tokenId) public view returns (string memory) {
+        return idToMetadata[tokenId].name;
+    }
+
+    function symbol(uint256 tokenId) public view returns(string memory){
+        return idToMetadata[tokenId].symbol;
+    }
+
+    function decimals(uint256 tokenId) public view returns(uint8){
+        return idToMetadata[tokenId].decimals;
+    }
+
 }
