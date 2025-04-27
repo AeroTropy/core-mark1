@@ -27,9 +27,10 @@ abstract contract MultiAssetVault is ERC6909 {
         bool isRegistered;
     }
 
-    mapping(uint256 tokenId => TokenMetadata metadata) private idToMetadata;
-    mapping(uint256 tokenId => address asset) private idToAsset;
-    mapping(uint256 tokenId => uint256 totalSupply_) private _totalSupply;
+    mapping(uint256 tokenId => TokenMetadata metadata) internal idToMetadata;
+    mapping(uint256 tokenId => address asset) internal idToAsset;
+    mapping(uint256 tokenId => uint256 totalSupply_) internal _totalSupply;
+    uint256 id;
     // #[derive(Copy, Drop, Serde, starknet::Store)]
 // pub struct TokenMetadata {
 //     pub name: felt252,
@@ -98,7 +99,7 @@ abstract contract MultiAssetVault is ERC6909 {
 
         emit Withdraw(tokenId, owner, receiver, assets, shares);
     }
-
+fffff
     function mint(uint256 tokenId, uint256 shares, address receiver) public virtual returns (uint256 assets) {
         address asset_ = idToAsset[tokenId];
         if (asset_ == address(0)) AssetNotFound.selector.revertWith();
