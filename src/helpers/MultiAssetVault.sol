@@ -22,7 +22,6 @@ abstract contract MultiAssetVault is ERC6909 {
         string name;
         string symbol;
         uint8 decimals;
-        uint256 totalSupply;
         address underlyingAsset;
         bool isRegistered;
     }
@@ -99,7 +98,7 @@ abstract contract MultiAssetVault is ERC6909 {
 
         emit Withdraw(tokenId, owner, receiver, assets, shares);
     }
-fffff
+
     function mint(uint256 tokenId, uint256 shares, address receiver) public virtual returns (uint256 assets) {
         address asset_ = idToAsset[tokenId];
         if (asset_ == address(0)) AssetNotFound.selector.revertWith();

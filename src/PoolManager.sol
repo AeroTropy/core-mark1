@@ -22,7 +22,10 @@ abstract contract PoolManager is UUPSUpgradeable, Ownable,MultiAssetVault {
         strategyManager = IStrategyManger(_strategyManager);
     }
 
-    function registerAsset(address asset,string memory name,string memory symbol) public returns(uint256 tokenId) {
+   
+   
+   
+   function registerAsset(address asset,string memory name,string memory symbol) public returns(uint256 tokenId) {
         if (registeredAssets[asset]) AssetAlreadyRegistered.selector.revertWith();
         uint8 decimals = IERC20(asset).decimals();
         tokenId++;
@@ -31,11 +34,22 @@ abstract contract PoolManager is UUPSUpgradeable, Ownable,MultiAssetVault {
             name: name,
             symbol: symbol,
             decimals: decimals,
-            totalSupply: 0,
             underlyingAsset: asset,
             isRegistered: true
         });
         registeredAssets[asset] = true;
+    }
+
+
+    function transferAssetToStrategy() external returns(uint256[] memory ,address[] memory){
+
+        for(uint i=0;i<=id;i++){
+            
+            
+        }
+
+
+
     }
 
     function transferToStrategyManager(address asset, uint256 amount) public {}
@@ -44,3 +58,5 @@ abstract contract PoolManager is UUPSUpgradeable, Ownable,MultiAssetVault {
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
+
+
