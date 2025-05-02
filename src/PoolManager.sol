@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
-
-import {IStrategyManager} from "./interfaces/IStrategyManager.sol";
 import {UUPSUpgradeable} from "@solady/utils/UUPSUpgradeable.sol";
 import {Ownable} from "@solady/auth/Ownable.sol";
 import {MultiAssetVault} from './helpers/MultiAssetVault.sol';
@@ -87,11 +85,7 @@ contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault {
             }
             
             // Transfer the assets to the strategy manager
-            bool success = IERC20(asset).transfer(strategyManager, amounts[i]);
-            if (!success) {
-                results[i] = false;
-                continue;
-            }
+            IERC20(asset).transfer(strategyManager, amounts[i]);
             
             // Update allocations
             strategyAllocations[tokenId] += amounts[i];
