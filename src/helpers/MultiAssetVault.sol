@@ -22,14 +22,14 @@ abstract contract MultiAssetVault is ERC6909 {
         string name;
         string symbol;
         uint8 decimals;
-        uint256 totalSupply;
         address underlyingAsset;
         bool isRegistered;
     }
 
-    mapping(uint256 tokenId => TokenMetadata metadata) private idToMetadata;
-    mapping(uint256 tokenId => address asset) private idToAsset;
-    mapping(uint256 tokenId => uint256 totalSupply_) private _totalSupply;
+    mapping(uint256 tokenId => TokenMetadata metadata) internal idToMetadata;
+    mapping(uint256 tokenId => address asset) internal idToAsset;
+    mapping(uint256 tokenId => uint256 totalSupply_) internal _totalSupply;
+    uint256 id;
     // #[derive(Copy, Drop, Serde, starknet::Store)]
 // pub struct TokenMetadata {
 //     pub name: felt252,
