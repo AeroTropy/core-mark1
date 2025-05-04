@@ -13,7 +13,7 @@ contract PoolManagerFactory {
     uint256 private deploymentCount;
 
     // Event emitted when a new PoolManager is deployed
-    event PoolManagerDeployed(address indexed poolManager, address indexed owner, address indexed strategyManager);
+    event PoolManagerDeployed(address indexed poolManager);
 
     /**
      * @notice Constructor for the PoolManagerFactory
@@ -23,13 +23,11 @@ contract PoolManagerFactory {
     /**
      * @notice Deploys a new PoolManager contract with deterministic address
      * @param salt The salt used for deterministic deployment
-     * @param owner The owner address of the new PoolManager
-     * @param strategyManager The strategy manager address for the new PoolManager
      * @return The address of the deployed PoolManager contract
      */
-    function deployNewContract(bytes32 salt, address owner, address strategyManager) external returns (address) {
+    function deployNewContract(bytes32 salt) external returns (address) {
         // Create the initialization code for the PoolManager contract
-        bytes memory initCode = abi.encodePacked(type(PoolManager).creationCode, abi.encode(owner, strategyManager));
+        bytes memory initCode = abi.encodePacked(type(PoolManager).creationCode);
 
         // Deploy the contract using CREATE3 for deterministic address
         address poolManager = CREATE3.deployDeterministic(initCode, salt);
@@ -38,7 +36,7 @@ contract PoolManagerFactory {
         deploymentCount++;
 
         // Emit event
-        emit PoolManagerDeployed(poolManager, owner, strategyManager);
+        emit PoolManagerDeployed(poolManager);
 
         return poolManager;
     }

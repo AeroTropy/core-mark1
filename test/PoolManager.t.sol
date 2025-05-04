@@ -49,7 +49,8 @@ contract PoolManagerTest is Test {
         strategyManager = new StrategyManagerMock();
         
         // Deploy pool manager
-        poolManager = new PoolManager(owner, address(strategyManager));
+        poolManager = new PoolManager();
+        poolManager.initialize(owner, address(strategyManager));
         
         // Register assets in the pool
         token1Id = poolManager.registerAsset(address(token1), "Token 1 Vault", "vTK1");
