@@ -42,7 +42,7 @@ abstract contract MultiAssetVault is ERC6909 {
 
     constructor() {}
 
-    function deposit(uint256 tokenId, uint256 assets, address receiver) public virtual returns (uint256 shares) {
+    function deposit(uint256 tokenId, uint256 assets, address receiver) public virtual payable returns (uint256 shares) {
         shares = previewDeposit(tokenId, assets);
         if (shares == 0) ZeroShares.selector.revertWith();
         address asset_ = idToAsset[tokenId];
