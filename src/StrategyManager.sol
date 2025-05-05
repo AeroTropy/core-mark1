@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@solady/utils/UUPSUpgradeable.sol";
+import {Ownable} from "@solady/auth/Ownable.sol";
+import {ReentrancyGuard} from "@solady/utils/ReentrancyGuard.sol";
+import {Initializable} from "@solady/utils/Initializable.sol";
 import {IERC20} from "./interfaces/IERC20.sol";
 import {IPoolManager} from "./interfaces/IPoolManager.sol";
 import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
@@ -15,9 +15,9 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
  */
 contract StrategyManager is 
     UUPSUpgradeable, 
-    ReentrancyGuardUpgradeable, 
-    PausableUpgradeable, 
-    OwnableUpgradeable 
+    ReentrancyGuard, 
+    Ownable,
+    Initializable
 {
     // Structs
     struct StrategyInfo {
@@ -86,7 +86,6 @@ contract StrategyManager is
     );
 
     // Errors
-    error Unauthorized();
     error InvalidStrategy();
     error StrategyNotFound();
     error ZeroAddress();
@@ -102,14 +101,7 @@ contract StrategyManager is
         if (_elizia == address(0) || _owner == address(0) || _uniswapRouter == address(0)) {
             revert ZeroAddress();
         }
-
-        __UUPSUpgradeable_init();
-        __ReentrancyGuard_init();
-        __Pausable_init();
-        __Ownable_init();
-        
-        // Transfer ownership to specified owner
-        _transferOwnership(_owner);
+        _initializeOwner(_owner);
         
         // Initialize state variables
         elizia = _elizia;
@@ -263,7 +255,7 @@ contract StrategyManager is
         address assetsTo,
         uint256[] calldata tokenIds,
         uint256[] calldata amountPercentages
-    ) external whenNotPaused nonReentrant returns (DepositedInfo memory) {
+    ) external nonReentrant returns (DepositedInfo memory) {
         if (msg.sender != elizia) {
             revert Unauthorized();
         }
@@ -461,7 +453,7 @@ contract StrategyManager is
         uint256 strategyId,
         uint256[] calldata amounts,
         uint256[] calldata tokenIds
-    ) external whenNotPaused nonReentrant onlyOwner returns (bool[] memory) {
+    ) external nonReentrant onlyOwner returns (bool[] memory) {
         if (tokenIds.length != amounts.length) {
             revert ArrayLengthMismatch();
         }

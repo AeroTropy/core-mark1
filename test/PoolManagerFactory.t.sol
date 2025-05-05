@@ -22,7 +22,7 @@ contract PoolManagerFactoryTest is Test {
         bytes32 salt = bytes32(uint256(1));
 
         // Deploy a new PoolManager contract
-        address poolManagerAddress = factory.deployNewContract(salt, owner, strategyManager);
+        address poolManagerAddress = factory.deployNewContract(salt);
 
         // Verify the contract was deployed
         assertTrue(poolManagerAddress != address(0), "Pool manager should be deployed");
@@ -39,7 +39,7 @@ contract PoolManagerFactoryTest is Test {
         address predictedAddress = factory.predictAddress(salt);
 
         // Deploy the contract
-        address actualAddress = factory.deployNewContract(salt, owner, strategyManager);
+        address actualAddress = factory.deployNewContract(salt);
 
         // Verify prediction was correct
         assertEq(actualAddress, predictedAddress, "Predicted address should match actual address");
@@ -51,8 +51,8 @@ contract PoolManagerFactoryTest is Test {
         bytes32 salt2 = bytes32(uint256(2));
 
         // Deploy two contracts with different salts
-        address poolManager1 = factory.deployNewContract(salt1, owner, strategyManager);
-        address poolManager2 = factory.deployNewContract(salt2, owner, strategyManager);
+        address poolManager1 = factory.deployNewContract(salt1);
+        address poolManager2 = factory.deployNewContract(salt2);
 
         // Verify they are different addresses
         assertTrue(poolManager1 != poolManager2, "Contracts should have different addresses");
@@ -66,9 +66,9 @@ contract PoolManagerFactoryTest is Test {
         bytes32 salt = bytes32(uint256(1));
 
         // Deploy with the same salt twice (should fail on the second attempt)
-        factory.deployNewContract(salt, owner, strategyManager);
+        factory.deployNewContract(salt);
         vm.expectRevert();
-        factory.deployNewContract(salt, owner, strategyManager);
+        factory.deployNewContract(salt);
     }
 
     // Test zero address validation
@@ -76,10 +76,10 @@ contract PoolManagerFactoryTest is Test {
         bytes32 salt = bytes32(uint256(1));
 
         // Deploy with zero address for owner (should not fail)
-        factory.deployNewContract(salt, address(0), strategyManager);
+        factory.deployNewContract(salt);
         vm.expectRevert();
         // Deploy with zero address for strategy manager (should not fail)
-        factory.deployNewContract(salt, owner, address(0));
+        factory.deployNewContract(salt);
     }
 }
 
@@ -108,7 +108,7 @@ contract PoolManagerFactoryFuzzTest is Test {
         vm.assume(strategyManager != address(0));
 
         // Deploy with fuzzed values
-        address poolManagerAddress = factory.deployNewContract(salt, owner, strategyManager);
+        address poolManagerAddress = factory.deployNewContract(salt);
 
         // Verify the deployment
         assertTrue(poolManagerAddress != address(0), "Pool manager should be deployed");
@@ -124,7 +124,7 @@ contract PoolManagerFactoryFuzzTest is Test {
         address predictedAddress = factory.predictAddress(salt);
 
         // Deploy the contract
-        address actualAddress = factory.deployNewContract(salt, owner, strategyManager);
+        address actualAddress = factory.deployNewContract(salt);
 
         // Verify prediction was correct
         assertEq(actualAddress, predictedAddress, "Predicted address should match actual address");
@@ -147,7 +147,7 @@ contract PoolManagerFactoryFuzzTest is Test {
             }
 
             if (!isDuplicate) {
-                factory.deployNewContract(salts[i], owner, strategyManager);
+                factory.deployNewContract(salts[i]);
                 expectedCount++;
             }
         }

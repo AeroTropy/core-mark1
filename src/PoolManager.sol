@@ -5,8 +5,9 @@ import {Ownable} from "@solady/auth/Ownable.sol";
 import {MultiAssetVault} from './helpers/MultiAssetVault.sol';
 import {CustomRevert} from './libraries/CustomRevert.sol';
 import {IERC20} from './interfaces/IERC20.sol';
+import {Initializable} from "@solady/utils/Initializable.sol";
 
-contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault {
+contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault, Initializable {
     using CustomRevert for bytes4;
     
     address public strategyManager;
@@ -25,7 +26,7 @@ contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault {
     event BatchFundsProvidedToStrategy(uint256[] tokenIds, address[] assets, uint256[] amounts);
     event BatchFundsReturnedFromStrategy(uint256[] tokenIds, address[] assets, uint256[] amounts);
     
-    constructor(address _owner, address _strategyManager) {
+    function initialize(address _owner, address _strategyManager) public initializer {
         _initializeOwner(_owner);
         strategyManager = _strategyManager;
     }
