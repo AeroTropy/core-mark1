@@ -6,8 +6,9 @@ import {MultiAssetVault} from './helpers/MultiAssetVault.sol';
 import {CustomRevert} from './libraries/CustomRevert.sol';
 import {IERC20} from './interfaces/IERC20.sol';
 import {Initializable} from "@solady/utils/Initializable.sol";
+import {IBundler} from '@mark-Bundler/interfaces/IBundler.sol';
 
-contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault, Initializable {
+contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault {
     using CustomRevert for bytes4;
     
     address public strategyManager;
@@ -21,19 +22,96 @@ contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault, Initializable
     error InvalidAllocationPercentage();
     error UnauthorizedCaller();
     error InsufficientAssets();
+    error ArrayLengthMismatch();
     
     event AssetRegistered(uint256 indexed tokenId, address indexed asset, string name, string symbol);
     event BatchFundsProvidedToStrategy(uint256[] tokenIds, address[] assets, uint256[] amounts);
     event BatchFundsReturnedFromStrategy(uint256[] tokenIds, address[] assets, uint256[] amounts);
+    event BundlerAddressUpdated(address oldBundler, address newBundler);
     
-    function initialize(address _owner, address _strategyManager) public initializer {
+    function initialize(address _owner, address _strategyManager,address _bundler) public initializer {
         _initializeOwner(_owner);
         strategyManager = _strategyManager;
+        bundler = _bundler;
+    }
+    
+    function _getActualCaller() internal view returns (address) {
+        if (msg.sender == bundler && bundler != address(0)) {
+            return IBundler(bundler).initiator();
+        }
+        return msg.sender;
+    }
+    
+    function _checkOwner() internal view virtual override {
+        if (_getActualCaller() != owner()) {
+            revert("Not owner");
+        }
     }
     
     modifier onlyStrategyManager() {
-        if (msg.sender != strategyManager) UnauthorizedCaller.selector.revertWith();
+        if (_getActualCaller() != strategyManager) UnauthorizedCaller.selector.revertWith();
         _;
+    }
+    
+    function deposit(uint256 tokenId, uint256 assets, address receiver) public virtual override payable returns (uint256) {
+        return deposit(tokenId, assets, _getActualCaller(), receiver);
+    }
+    
+    function mint(uint256 tokenId, uint256 shares, address receiver) public virtual override returns (uint256) {
+        return mint(tokenId, shares, _getActualCaller(), receiver);
+    }
+    
+    function redeem(uint256 tokenId, uint256 shares, address receiver, address owner)
+        public
+        virtual
+        override
+        returns (uint256 assets)
+    {
+        address asset_ = idToAsset[tokenId];
+        if (asset_ == address(0)) AssetNotFound.selector.revertWith();
+        assets = previewRedeem(tokenId, shares);
+        if (assets == 0) ZeroShares.selector.revertWith();
+        
+        address actualCaller = _getActualCaller();
+        if (actualCaller != owner) {
+            uint256 allowed = allowance[owner][actualCaller][tokenId];
+            if (allowed != type(uint256).max) {
+                allowance[owner][actualCaller][tokenId] = allowed - shares;
+            }
+        }
+        _burn(owner, tokenId, shares);
+        IERC20(asset_).transfer(receiver, assets);
+        emit Withdraw(tokenId, owner, receiver, assets, shares);
+        
+        return assets;
+    }
+
+    function withdraw(uint256 tokenId, uint256 assets, address receiver, address owner)
+        public
+        virtual
+        override
+        returns (uint256 shares)
+    {
+        address asset_ = idToAsset[tokenId];
+        if (asset_ == address(0)) AssetNotFound.selector.revertWith();
+        shares = previewWithdraw(tokenId, assets);
+        if (shares == 0) ZeroShares.selector.revertWith();
+        
+        address actualCaller = _getActualCaller();
+        if (actualCaller != owner) {
+            uint256 allowed = allowance[owner][actualCaller][tokenId];
+            if (allowed != type(uint256).max) {
+                allowance[owner][actualCaller][tokenId] = allowed - shares;
+            }
+        }
+
+        _burn(owner, tokenId, shares);
+
+        IERC20(asset_).transfer(receiver, assets);
+
+        emit Withdraw(tokenId, owner, receiver, assets, shares);
+        
+        return shares;
     }
     
     function registerAsset(address asset, string memory name, string memory symbol) public onlyOwner returns(uint256 tokenId) {
@@ -65,7 +143,7 @@ contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault, Initializable
         uint256[] calldata tokenIds, 
         uint256[] calldata amounts
     ) external onlyStrategyManager returns (bool[] memory results) {
-        if (tokenIds.length != amounts.length) revert("Array length mismatch");
+        if (tokenIds.length != amounts.length) revert ArrayLengthMismatch();
         
         results = new bool[](tokenIds.length);
         address[] memory assets = new address[](tokenIds.length);
@@ -104,7 +182,7 @@ contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault, Initializable
         uint256[] calldata tokenIds, 
         uint256[] calldata amounts
     ) external onlyStrategyManager returns (bool[] memory results) {
-        if (tokenIds.length != amounts.length) revert("Array length mismatch");
+        if (tokenIds.length != amounts.length) revert ArrayLengthMismatch();
         
         results = new bool[](tokenIds.length);
         address[] memory assets = new address[](tokenIds.length);
@@ -182,6 +260,13 @@ contract PoolManager is UUPSUpgradeable, Ownable, MultiAssetVault, Initializable
     // Update strategy manager address
     function updateStrategyManager(address _newStrategyManager) external onlyOwner {
         strategyManager = _newStrategyManager;
+    }
+    
+    // Add function to update bundler address
+    function updateBundler(address _newBundler) external onlyOwner {
+        address oldBundler = bundler;
+        bundler = _newBundler;
+        emit BundlerAddressUpdated(oldBundler, _newBundler);
     }
     
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
