@@ -30,21 +30,10 @@ abstract contract MultiAssetVault is ERC6909 {
     mapping(uint256 tokenId => address asset) internal idToAsset;
     mapping(uint256 tokenId => uint256 totalSupply_) internal _totalSupply;
     uint256 id;
-    address internal bundler;
-    // #[derive(Copy, Drop, Serde, starknet::Store)]
-// pub struct TokenMetadata {
-//     pub name: felt252,
-//     pub symbol: felt252,
-//     pub decimals: u8,
-//     pub total_supply: u256,
-//     pub underlying_asset: ContractAddress,
-//     pub is_registered: bool,
-// }
-
+    
     constructor() {}
 
-    function deposit(uint256 tokenId, uint256 assets,address caller, address receiver) public virtual payable returns (uint256 shares) {
-        if(msg.sender!=bundler) caller=msg.sender;
+    function deposit(uint256 tokenId, uint256 assets,address caller, address receiver) internal returns (uint256 shares) {
         shares = previewDeposit(tokenId, assets);
         if (shares == 0) ZeroShares.selector.revertWith();
         address asset_ = idToAsset[tokenId];
@@ -101,8 +90,7 @@ abstract contract MultiAssetVault is ERC6909 {
         emit Withdraw(tokenId, owner, receiver, assets, shares);
     }
 
-    function mint(uint256 tokenId, uint256 shares, address caller, address receiver) public virtual returns (uint256 assets) {
-        if(msg.sender!=bundler) caller=msg.sender;
+    function mint(uint256 tokenId, uint256 shares, address caller, address receiver) internal virtual returns (uint256 assets) {
         address asset_ = idToAsset[tokenId];
         if (asset_ == address(0)) AssetNotFound.selector.revertWith();
         assets = previewMint(tokenId, shares);

@@ -8,10 +8,12 @@ import {IERC20} from './interfaces/IERC20.sol';
 import {Initializable} from "@solady/utils/Initializable.sol";
 import {IBundler} from '@mark-Bundler/interfaces/IBundler.sol';
 
-contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault {
+contract PoolManager is Initializable, UUPSUpgradeable, Ownable, MultiAssetVault {
     using CustomRevert for bytes4;
     
     address public strategyManager;
+
+    address public bundler;
     
     mapping(address asset => bool isRegistered) public registeredAssets;
     mapping(uint256 tokenId => uint256 allocatedToStrategy) public strategyAllocations;
@@ -23,13 +25,14 @@ contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault 
     error UnauthorizedCaller();
     error InsufficientAssets();
     error ArrayLengthMismatch();
+    error InvalidBundlerImplementation();
     
     event AssetRegistered(uint256 indexed tokenId, address indexed asset, string name, string symbol);
     event BatchFundsProvidedToStrategy(uint256[] tokenIds, address[] assets, uint256[] amounts);
     event BatchFundsReturnedFromStrategy(uint256[] tokenIds, address[] assets, uint256[] amounts);
     event BundlerAddressUpdated(address oldBundler, address newBundler);
     
-    function initialize(address _owner, address _strategyManager,address _bundler) public initializer {
+    function initialize(address _owner, address _strategyManager, address _bundler) public initializer {
         _initializeOwner(_owner);
         strategyManager = _strategyManager;
         bundler = _bundler;
@@ -52,67 +55,16 @@ contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault 
         if (_getActualCaller() != strategyManager) UnauthorizedCaller.selector.revertWith();
         _;
     }
+
     
-    function deposit(uint256 tokenId, uint256 assets, address receiver) public virtual override payable returns (uint256) {
-        return deposit(tokenId, assets, _getActualCaller(), receiver);
-    }
-    
-    function mint(uint256 tokenId, uint256 shares, address receiver) public virtual override returns (uint256) {
-        return mint(tokenId, shares, _getActualCaller(), receiver);
+    function deposit(uint256 tokenId, uint256 assets, address receiver) public payable returns (uint256) {
+        return super.deposit(tokenId, assets, _getActualCaller(), receiver);
     }
     
-    function redeem(uint256 tokenId, uint256 shares, address receiver, address owner)
-        public
-        virtual
-        override
-        returns (uint256 assets)
-    {
-        address asset_ = idToAsset[tokenId];
-        if (asset_ == address(0)) AssetNotFound.selector.revertWith();
-        assets = previewRedeem(tokenId, shares);
-        if (assets == 0) ZeroShares.selector.revertWith();
-        
-        address actualCaller = _getActualCaller();
-        if (actualCaller != owner) {
-            uint256 allowed = allowance[owner][actualCaller][tokenId];
-            if (allowed != type(uint256).max) {
-                allowance[owner][actualCaller][tokenId] = allowed - shares;
-            }
-        }
-        _burn(owner, tokenId, shares);
-        IERC20(asset_).transfer(receiver, assets);
-        emit Withdraw(tokenId, owner, receiver, assets, shares);
-        
-        return assets;
+    function mint(uint256 tokenId, uint256 shares, address receiver) public payable returns (uint256) {
+        return super.mint(tokenId, shares, _getActualCaller(), receiver);
     }
-
-    function withdraw(uint256 tokenId, uint256 assets, address receiver, address owner)
-        public
-        virtual
-        override
-        returns (uint256 shares)
-    {
-        address asset_ = idToAsset[tokenId];
-        if (asset_ == address(0)) AssetNotFound.selector.revertWith();
-        shares = previewWithdraw(tokenId, assets);
-        if (shares == 0) ZeroShares.selector.revertWith();
-        
-        address actualCaller = _getActualCaller();
-        if (actualCaller != owner) {
-            uint256 allowed = allowance[owner][actualCaller][tokenId];
-            if (allowed != type(uint256).max) {
-                allowance[owner][actualCaller][tokenId] = allowed - shares;
-            }
-        }
-
-        _burn(owner, tokenId, shares);
-
-        IERC20(asset_).transfer(receiver, assets);
-
-        emit Withdraw(tokenId, owner, receiver, assets, shares);
-        
-        return shares;
-    }
+    
     
     function registerAsset(address asset, string memory name, string memory symbol) public onlyOwner returns(uint256 tokenId) {
         if (registeredAssets[asset]) AssetAlreadyRegistered.selector.revertWith();
@@ -138,7 +90,6 @@ contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault 
         return tokenId;
     }
     
-    // Batch function for StrategyManager to pull multiple assets from the pool
     function provideBatchFundsToStrategy(
         uint256[] calldata tokenIds, 
         uint256[] calldata amounts
@@ -177,7 +128,6 @@ contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault 
         return results;
     }
     
-    // Batch function for StrategyManager to return multiple assets to the pool
     function receiveBatchFundsFromStrategy(
         uint256[] calldata tokenIds, 
         uint256[] calldata amounts
@@ -212,7 +162,6 @@ contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault 
         return results;
     }
     
-    // Get all registered assets with their token IDs
     function getRegisteredAssets() public view returns(
         uint256[] memory tokenIds, 
         address[] memory assets
@@ -235,7 +184,6 @@ contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault 
         return (tokenIds, assets);
     }
     
-    // Get information about all tokens with their allocations
     function getAllTokensInfo() public view returns(
         uint256[] memory tokenIds,
         address[] memory assets,
@@ -257,13 +205,23 @@ contract PoolManager is Initializable,UUPSUpgradeable, Ownable, MultiAssetVault 
         return (tokenIds, assets, totalAssetsInPool, allocatedToStrategy);
     }
     
-    // Update strategy manager address
     function updateStrategyManager(address _newStrategyManager) external onlyOwner {
         strategyManager = _newStrategyManager;
     }
     
-    // Add function to update bundler address
+    function validateBundler(address _bundler) internal view returns (bool) {
+        if (_bundler == address(0)) return true;
+        
+        try IBundler(_bundler).initiator() returns (address) {
+            return true;
+        } catch {
+            return false;
+        }
+    }
+    
     function updateBundler(address _newBundler) external onlyOwner {
+        if (!validateBundler(_newBundler)) revert InvalidBundlerImplementation();
+        
         address oldBundler = bundler;
         bundler = _newBundler;
         emit BundlerAddressUpdated(oldBundler, _newBundler);
