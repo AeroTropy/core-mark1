@@ -30,19 +30,10 @@ abstract contract MultiAssetVault is ERC6909 {
     mapping(uint256 tokenId => address asset) internal idToAsset;
     mapping(uint256 tokenId => uint256 totalSupply_) internal _totalSupply;
     uint256 id;
-    // #[derive(Copy, Drop, Serde, starknet::Store)]
-// pub struct TokenMetadata {
-//     pub name: felt252,
-//     pub symbol: felt252,
-//     pub decimals: u8,
-//     pub total_supply: u256,
-//     pub underlying_asset: ContractAddress,
-//     pub is_registered: bool,
-// }
-
+    
     constructor() {}
 
-    function deposit(uint256 tokenId, uint256 assets, address receiver) public virtual payable returns (uint256 shares) {
+    function deposit(uint256 tokenId, uint256 assets,address caller, address receiver) internal returns (uint256 shares) {
         shares = previewDeposit(tokenId, assets);
         if (shares == 0) ZeroShares.selector.revertWith();
         address asset_ = idToAsset[tokenId];
@@ -51,9 +42,9 @@ abstract contract MultiAssetVault is ERC6909 {
 
         _mint(receiver, tokenId, shares);
 
-        IERC20(asset_).transferFrom(msg.sender, address(this), assets);
+        IERC20(asset_).transferFrom(caller, address(this), assets);
 
-        emit Deposit(tokenId, msg.sender, receiver, assets, shares);
+        emit Deposit(tokenId, caller, receiver, assets, shares);
     }
 
     function redeem(uint256 tokenId, uint256 shares, address receiver, address owner)
@@ -99,7 +90,7 @@ abstract contract MultiAssetVault is ERC6909 {
         emit Withdraw(tokenId, owner, receiver, assets, shares);
     }
 
-    function mint(uint256 tokenId, uint256 shares, address receiver) public virtual returns (uint256 assets) {
+    function mint(uint256 tokenId, uint256 shares, address caller, address receiver) internal virtual returns (uint256 assets) {
         address asset_ = idToAsset[tokenId];
         if (asset_ == address(0)) AssetNotFound.selector.revertWith();
         assets = previewMint(tokenId, shares);
@@ -107,9 +98,9 @@ abstract contract MultiAssetVault is ERC6909 {
 
         _mint(receiver, tokenId, shares);
 
-        IERC20(asset_).transferFrom(msg.sender, address(this), assets);
+        IERC20(asset_).transferFrom(caller, address(this), assets);
 
-        emit Deposit(tokenId, msg.sender, receiver, assets, shares);
+        emit Deposit(tokenId, caller, receiver, assets, shares);
     }
 
     function asset(uint256 tokenId) public virtual returns (address) {

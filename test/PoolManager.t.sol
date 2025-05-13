@@ -50,7 +50,7 @@ contract PoolManagerTest is Test {
         
         // Deploy pool manager
         poolManager = new PoolManager();
-        poolManager.initialize(owner, address(strategyManager));
+        poolManager.initialize(owner, address(strategyManager), address(0));
         
         // Register assets in the pool
         token1Id = poolManager.registerAsset(address(token1), "Token 1 Vault", "vTK1");
